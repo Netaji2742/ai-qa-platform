@@ -151,3 +151,11 @@ and the Gemini API key are all read from the environment.
   separately, then authorize with the token). A small `Bearer401` subclass
   on top corrects `HTTPBearer`'s default `403` for a missing token to the
   more correct `401`.
+
+## Example Output:
+**In Terminal:**
+![alt text](image.png)
+
+**In Web:(http://localhost:8000/docs#/chat/chat_chat_post)**
+![alt text](image-1.png)
+![alt text](image-2.png)
