@@ -58,7 +58,9 @@ def _call_gemini(question: str):
     return client.models.generate_content(
         model=settings.GEMINI_MODEL,
         contents=question,
-        config={"http_options": {"timeout": int(settings.LLM_TIMEOUT_SECONDS * 1000)}},
+        config={"http_options": {"timeout": int(settings.LLM_TIMEOUT_SECONDS * 1000)},
+                "thinking_config": {"thinking_level": "low"},                
+        },
     )
 
 

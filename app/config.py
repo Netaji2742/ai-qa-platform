@@ -38,7 +38,7 @@ class Settings(BaseSettings):
 
     # --- LLM (Google Gemini) ---
     GEMINI_API_KEY: str  # required, no default — get a free one at aistudio.google.com/app/apikey
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-3.6-flash"
     LLM_TIMEOUT_SECONDS: float = 15.0
     LLM_MAX_RETRIES: int = 3
     LLM_FALLBACK_MESSAGE: str = (

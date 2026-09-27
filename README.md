@@ -53,7 +53,7 @@ docker compose up --build
 
 The API is now at `http://localhost:8000` (interactive docs at `/docs`).
 
-### Try it
+### Try it — via curl
 
 ```bash
 # 1. Log in (demo credentials from .env.example: demo / changeme123)
@@ -74,6 +74,16 @@ curl -s http://localhost:8000/health | python3 -m json.tool
 curl -s http://localhost:8000/metrics -H "Authorization: Bearer $TOKEN"
 ```
 
+### Try it — via the interactive docs UI
+
+No curl needed — `http://localhost:8000/docs` is a full interactive UI:
+
+1. Expand **POST /auth/login** → "Try it out" → body `{"username": "demo", "password": "changeme123"}` → Execute. Copy the `access_token` from the response.
+2. Click the green **Authorize** button near the top of the page → paste the token (no `Bearer ` prefix needed) → Authorize → Close.
+3. Expand **POST /chat** → "Try it out" → type a question → Execute. Ask as many questions as you like without logging in again, until the token expires (30 min).
+
+(The Authorize dialog takes a plain pasted token — it isn't the OAuth2 username/password form some FastAPI demos use, because `/auth/login` here is a plain JSON endpoint, not the OAuth2 password-grant flow.)
+
 ## Running locally without Docker
 
 ```bash
@@ -92,6 +102,8 @@ pytest tests/ -v
 
 Tests use an in-memory SQLite database and `fakeredis`, and mock the Gemini
 call directly — no network access or real API key required to run the suite.
+`pytest.ini` sets `pythonpath = .` so the bare `pytest` command resolves the
+`app` package correctly regardless of how it's invoked.
 
 ## Environment variables
 
@@ -131,3 +143,11 @@ and the Gemini API key are all read from the environment.
   "what's happening right now," the `chat_logs` table answers "what
   happened and to whom," which is what a real billing/abuse-review feature
   would query.
+- **`HTTPBearer` instead of `OAuth2PasswordBearer`** for the security scheme —
+  `OAuth2PasswordBearer` makes the Swagger "Authorize" dialog submit a
+  form-encoded username/password to the login endpoint, which doesn't match
+  our plain JSON `/auth/login`. `HTTPBearer` makes Authorize just accept a
+  pasted token, matching how the API is actually meant to be used (log in
+  separately, then authorize with the token). A small `Bearer401` subclass
+  on top corrects `HTTPBearer`'s default `403` for a missing token to the
+  more correct `401`.

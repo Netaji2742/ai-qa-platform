@@ -9,8 +9,8 @@ this API validating IdP-issued JWTs instead of minting its own).
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
@@ -18,7 +18,31 @@ from app.config import get_settings
 
 settings = get_settings()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+
+
+class Bearer401(HTTPBearer):
+    """HTTPBearer defaults to 403 when no Authorization header is present
+    at all, which is the wrong status code (403 implies an authenticated
+    but disallowed request; missing credentials is 401). This subclass
+    corrects that to 401 to match standard REST semantics."""
+
+    async def __call__(self, request: Request) -> HTTPAuthorizationCredentials:
+        try:
+            return await super().__call__(request)
+        except HTTPException as exc:
+            if exc.status_code == status.HTTP_403_FORBIDDEN:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=exc.detail,
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            raise
+
+
+# HTTPBearer (not OAuth2PasswordBearer) so the Swagger "Authorize" dialog
+# just takes a pasted token, matching how /auth/login actually works (a
+# plain JSON body, not the OAuth2 form-encoded password flow).
+bearer_scheme = Bearer401()
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -67,8 +91,8 @@ def decode_access_token(token: str) -> dict:
         raise credentials_exception
 
 
-def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
-    payload = decode_access_token(token)
+def get_current_user(creds: HTTPAuthorizationCredentials = Depends(bearer_scheme)) -> dict:
+    payload = decode_access_token(creds.credentials)
     return {"username": payload.get("sub"), "role": payload.get("role", "user")}
 
 
